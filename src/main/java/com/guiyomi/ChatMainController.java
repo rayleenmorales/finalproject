@@ -174,6 +174,7 @@ public class ChatMainController extends Application {
                     Parent root = FXMLLoader.load(getClass().getResource("LOGIN PAGE.fxml"));
                     Scene scene = new Scene(root);
                     stage.setScene(scene);
+                    stage.centerOnScreen();
                     stage.show();
                 }
                 catch (Exception e) {
