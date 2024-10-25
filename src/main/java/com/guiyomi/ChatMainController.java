@@ -8,17 +8,27 @@ import java.net.URL;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import javafx.scene.layout.HBox;
+import javafx.scene.text.Text;
+import javafx.application.Platform;
+import javafx.geometry.Pos;
+import java.util.Map;
+import java.util.HashMap;
+import java.time.Instant;
 
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -32,6 +42,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -40,6 +51,7 @@ import javafx.scene.paint.ImagePattern;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 
@@ -51,7 +63,9 @@ public class ChatMainController extends Application {
 
 
     @FXML
-    private ScrollPane messageContainer;
+    private ScrollPane messageContainer;  
+    
+    private VBox messageVBox;
 
 
     @FXML
@@ -77,6 +91,9 @@ public class ChatMainController extends Application {
     @FXML
     private Button logoutButton;
 
+    @FXML
+    private Label statusLabel;
+
 
     FirebaseService firebaseService = new FirebaseService();
 
@@ -101,6 +118,13 @@ public class ChatMainController extends Application {
 
     @FXML
     public void initialize() {
+
+        boolean loggedInStatus = UserSession.isLoggedIn(); // Retrieve loggedIn status from UserSession
+        updateStatusLabel(loggedInStatus);
+
+        messageVBox = new VBox();  // Initialize VBox to contain message boxes
+        messageContainer.setContent(messageVBox);
+
         // Load user's name and profile picture
         if (UserSession.isLoggedIn()) {
             // Load user data into the FXML elements
@@ -124,6 +148,11 @@ public class ChatMainController extends Application {
                 System.out.println("Invalid profile photo URL.");
             }
         }
+
+
+        
+        
+        
         
 
 
@@ -174,7 +203,6 @@ public class ChatMainController extends Application {
                     Parent root = FXMLLoader.load(getClass().getResource("LOGIN PAGE.fxml"));
                     Scene scene = new Scene(root);
                     stage.setScene(scene);
-                    stage.centerOnScreen();
                     stage.show();
                 }
                 catch (Exception e) {
@@ -191,152 +219,194 @@ public class ChatMainController extends Application {
     }
 
 
-   private void populateUserListWithHttp() {
-    String url = "https://firestore.googleapis.com/v1/projects/katalk-db42a/databases/(default)/documents/users";
-   
-    try {
-        String jsonResponse = sendHttpGetRequest(url);
-        JSONObject jsonResponseObject = new JSONObject(jsonResponse);
-        JSONArray documents = jsonResponseObject.getJSONArray("documents");
+    private void populateUserListWithHttp() {
+        String url = "https://firestore.googleapis.com/v1/projects/katalk-db42a/databases/(default)/documents/users";
 
-
-        // Clear the VBox before adding new users
-        Platform.runLater(() -> userContainer.getChildren().clear());
-
-
-        // Iterate over the documents array
-        for (int i = 0; i < documents.length(); i++) {
-            JSONObject document = documents.getJSONObject(i);
-            JSONObject fields = document.getJSONObject("fields");
-
-
-            // Extract first and last names
-            String firstName = fields.has("firstName") ?
-                fields.getJSONObject("firstName").getString("stringValue") : "Unknown";
-            String lastName = fields.has("lastName") ?
-                fields.getJSONObject("lastName").getString("stringValue") : "Unknown";
-
-
-            // Create a new Pane for each user
-            Pane userPane = createUserPane(firstName + " " + lastName, "Chat: Lorem Ipsum");
-            userPane.setOnMouseClicked(event -> selectUser(firstName + " " + lastName, "")); // Add logic for profile picture if needed
-
-
-            // Add user pane to the user container
-            Platform.runLater(() -> userContainer.getChildren().add(userPane));
-        }
-    } catch (JSONException e) {
-        e.printStackTrace(); // Handle the exception appropriately
-    } catch (Exception e) {
-        e.printStackTrace(); // Handle any other exceptions
-    }
-}
-
-
-private Pane createUserPane(String userName, String chatPreview) {
-    Pane userPane = new Pane();
-    userPane.setPrefSize(310.0, 79.0);
-    userPane.setStyle("-fx-background-color: white; -fx-padding: 10; -fx-border-color: lightgray; -fx-border-width: 1;");
-
-
-    // Create the Circle for the profile picture
-    Circle profilePic = new Circle(31.0, Color.RED); // Placeholder for now
-    profilePic.setStroke(Color.BLACK);
-    profilePic.setStrokeType(StrokeType.INSIDE);
-    profilePic.setLayoutX(45.0);
-    profilePic.setLayoutY(40.0);
-
-
-    // Create the name label
-    Label nameLabel = new Label(userName);
-    nameLabel.setLayoutX(86.0);
-    nameLabel.setLayoutY(9.0);
-    nameLabel.setPrefHeight(38.0);
-    nameLabel.setPrefWidth(180.0);
-    nameLabel.setFont(new Font("Arial Rounded MT Bold", 16.0));
-
-
-    // Create the chat preview label
-    Label chatLabel = new Label(chatPreview);
-    chatLabel.setLayoutX(86.0);
-    chatLabel.setLayoutY(40.0);
-    chatLabel.setPrefHeight(24.0);
-    chatLabel.setPrefWidth(180.0);
-    chatLabel.setFont(new Font("Arial", 16.0));
-
-
-    // Add all elements to the userPane
-    userPane.getChildren().addAll(profilePic, nameLabel, chatLabel);
-    return userPane;
-}
-
-
-   
-
-
-
-
-public void selectUser(String fullName, String profilePicUrl) {
-    selectedUserLabel.setText(fullName); // Update the label with the selected user's name
-
-
-    // Clear previous messages in the messageContainer
-    messageContainer.getChildrenUnmodifiable().clear();  
-
-
-    // Load messages history for the selected user
-    loadMessageHistory(fullName);  
-
-
-    // If a profile picture URL is provided, load and display it
-    if (profilePicUrl != null && !profilePicUrl.isEmpty()) {
         try {
-            Image profileImage = new Image(profilePicUrl);
-            Platform.runLater(() -> selectedUserProfile.setFill(new ImagePattern(profileImage)));
+            // Send HTTP GET request to retrieve users
+            String jsonResponse = sendHttpGetRequest(url);
+            JSONObject jsonResponseObject = new JSONObject(jsonResponse);
+            JSONArray documents = jsonResponseObject.getJSONArray("documents");
 
+            // Clear the VBox before adding new users
+            Platform.runLater(() -> userContainer.getChildren().clear());
+
+            // Iterate over each document
+            for (int i = 0; i < documents.length(); i++) {
+                JSONObject document = documents.getJSONObject(i);
+                JSONObject fields = document.getJSONObject("fields");
+
+                // Retrieve user details and logged-in status
+                String firstName = fields.has("firstName") ?
+                        fields.getJSONObject("firstName").getString("stringValue") : "Unknown";
+                String lastName = fields.has("lastName") ?
+                        fields.getJSONObject("lastName").getString("stringValue") : "Unknown";
+                boolean loggedIn = fields.has("loggedIn") &&
+                        fields.getJSONObject("loggedIn").getBoolean("booleanValue");
+
+                // Create a new Pane for each user
+                Pane userPane = createUserPane(firstName + " " + lastName, "Chat: Lorem Ipsum");
+
+                // Set status label based on the logged-in status
+                Label statusLabel = new Label();
+                if (loggedIn) {
+                    statusLabel.setText("Active now");
+                    statusLabel.setTextFill(Color.GREEN); // Green when online
+                } else {
+                    statusLabel.setText("Not active");
+                    statusLabel.setTextFill(Color.GRAY); // Gray when offline
+                }
+
+                // Set padding directly in code
+                statusLabel.setPadding(new Insets(62, 0, 0, 85));
+
+                // Attach the status label to the user pane
+                userPane.getChildren().add(statusLabel);
+
+                // Add click event to select the user
+                userPane.setOnMouseClicked(event -> selectUser(firstName + " " + lastName, ""));
+
+                // Add user pane to the user container
+                Platform.runLater(() -> userContainer.getChildren().add(userPane));
+            }
+        } catch (JSONException e) {
+            e.printStackTrace(); // Handle JSON parsing exceptions
         } catch (Exception e) {
-            System.out.println("Error loading selected user's profile picture: " + e.getMessage());
+            e.printStackTrace(); // Handle other exceptions
         }
-    } else {
-        // Set a default image or clear the ImageView if no URL is available
-        Platform.runLater(() -> selectedUserProfile.setFill(new ImagePattern(null)));
-
     }
-}
 
-
+    private Pane createUserPane(String userName, String chatPreview) {
+        Pane userPane = new Pane();
+        userPane.setPrefSize(310.0, 79.0);
+        userPane.setStyle("-fx-background-color: white; -fx-padding: 10; -fx-border-color: lightgray; -fx-border-width: 1;");
+    
+        // Create the Circle for the profile picture
+        Circle profilePic = new Circle(31.0, Color.RED); // Placeholder for now
+        profilePic.setStroke(Color.BLACK);
+        profilePic.setStrokeType(StrokeType.INSIDE);
+        profilePic.setLayoutX(45.0);
+        profilePic.setLayoutY(40.0);
+    
+        // Create the name label
+        Label nameLabel = new Label(userName);
+        nameLabel.setLayoutX(86.0);
+        nameLabel.setLayoutY(9.0);
+        nameLabel.setPrefHeight(38.0);
+        nameLabel.setPrefWidth(180.0);
+        nameLabel.setFont(new Font("Arial Rounded MT Bold", 16.0));
+    
+        // Create the chat preview label
+        Label chatLabel = new Label(chatPreview);
+        chatLabel.setLayoutX(86.0);
+        chatLabel.setLayoutY(37.0);
+        chatLabel.setPrefHeight(24.0);
+        chatLabel.setPrefWidth(180.0);
+        chatLabel.setFont(new Font("Arial", 16.0));
+    
+        // Add all elements to the userPane
+        userPane.getChildren().addAll(profilePic, nameLabel, chatLabel);
+    
+        // Set hover effects
+        userPane.setOnMouseEntered(event -> {
+            userPane.setStyle("-fx-background-color: #d3d3d3; -fx-padding: 10; -fx-border-color: lightgray; -fx-border-width: 1;"); // Change background on hover
+        });
+    
+        userPane.setOnMouseExited(event -> {
+            userPane.setStyle("-fx-background-color: white; -fx-padding: 10; -fx-border-color: lightgray; -fx-border-width: 1;"); // Revert back on exit
+        });
+    
+        return userPane;
+    }
+    
 
 
    
-    public void handleSendButton(ActionEvent event) {
-        String messageText = messageField.getText();
-        if (!messageText.isEmpty()) {
-            String selectedUser = selectedUserLabel.getText();
-            String currentUser = UserSession.getUserName();  // Assuming the current user's name is stored in session
-   
-            // Prepare the message data
-            Map<String, Object> messageData = new HashMap<>();
-            messageData.put("sender", currentUser); // Use 'sender'
-            messageData.put("receiver", selectedUser); // Use 'receiver'
-            messageData.put("text", messageText); // Use 'text'
-            messageData.put("timestamp", Instant.now().toString()); // Use the current timestamp
-   
-            // Call the HTTP-based sendMessage method
-            boolean success = firebaseService.sendMessage(messageData); // This should now return a boolean
-            if (success) {
-                messageField.clear();  // Clear message field
-                displayMessage(messageText, true);  // Display the sent message in chat
+
+
+
+
+        public void selectUser(String fullName, String profilePicUrl) {
+            // Update the label with the selected user's name
+            selectedUserLabel.setText(fullName);
+
+            // Retrieve the content node (AnchorPane) of the ScrollPane and clear it
+            if (messageContainer.getContent() instanceof AnchorPane) {
+                AnchorPane messagePane = (AnchorPane) messageContainer.getContent();
+
+                // Clear messages in the container
+                Platform.runLater(() -> {
+                    messagePane.getChildren().clear();
+                });
+            }
+
+            // Load messages history for the selected user
+            loadMessageHistory(fullName);
+
+            // If a profile picture URL is provided, load and display it
+            if (profilePicUrl != null && !profilePicUrl.isEmpty()) {
+                try {
+                    Image profileImage = new Image(profilePicUrl);
+                    Platform.runLater(() -> selectedUserProfile.setFill(new ImagePattern(profileImage)));
+                } catch (Exception e) {
+                    System.out.println("Error loading selected user's profile picture: " + e.getMessage());
+                }
             } else {
-                // Display an error message to the user
-                System.out.println("Message sending failed. Please try again.");
+                // Set a default image or clear the ImageView if no URL is available
+                Platform.runLater(() -> selectedUserProfile.setFill(new ImagePattern(null)));
             }
         }
-    }
-   
-   
+
+
+
+
 
 
    
+        @FXML
+        public void handleSendButton(ActionEvent event) {
+            String messageText = messageField.getText();
+            if (!messageText.isEmpty()) {
+                String selectedUser = selectedUserLabel.getText();
+                String currentUser = UserSession.getUserName(); // Assuming the current user's name is stored in session
+        
+                // Prepare the message data
+                Map<String, Object> messageData = new HashMap<>();
+                messageData.put("sender", currentUser); // Use 'sender'
+                messageData.put("receiver", selectedUser); // Use 'receiver'
+                messageData.put("text", messageText); // Use 'text'
+                messageData.put("timestamp", Instant.now().toString()); // Use the current timestamp
+        
+                // Call the HTTP-based sendMessage method
+                boolean success = firebaseService.sendMessage(messageData); // This should return a boolean
+                if (success) {
+                    addMessage(messageText, true); // Call addMessage to display the sent message
+                    messageField.clear(); // Clear message field
+                } else {
+                    // Display an error message to the user
+                    System.out.println("Message sending failed. Please try again.");
+                }
+            }
+        }
+        
+
+        private void addMessage(String messageText, boolean isCurrentUser) {
+            HBox messageBox = new HBox();  // Create HBox for each message
+            Text message = new Text(messageText);  // Set message text
+            messageBox.getChildren().add(message);  // Add message Text to HBox
+            
+            // Align message based on sender
+            if (isCurrentUser) {
+                messageBox.setAlignment(Pos.CENTER_RIGHT);
+            } else {
+                messageBox.setAlignment(Pos.CENTER_LEFT);
+            }
+            
+            // Add HBox to VBox in a thread-safe manner
+            Platform.runLater(() -> messageVBox.getChildren().add(messageBox));  
+        }
+    
+        
 
 
     public void displayMessage(String message, boolean isCurrentUser) {
@@ -421,10 +491,6 @@ public void selectUser(String fullName, String profilePicUrl) {
             e.printStackTrace();
         }
     }
-   
-   
-   
-   
    
     private String sendHttpGetRequest(String urlString) throws Exception {
         // Create a URL object
@@ -517,7 +583,15 @@ public void selectUser(String fullName, String profilePicUrl) {
     }
    
 
-
+    private void updateStatusLabel(boolean loggedInStatus) {
+        if (loggedInStatus) {
+            statusLabel.setText("Active now");
+            statusLabel.setTextFill(Color.GREEN); // Set to green when active
+        } else {
+            statusLabel.setText("Not active");
+            statusLabel.setTextFill(Color.GRAY); // Set to gray when inactive
+        }
+    }
 
 
    

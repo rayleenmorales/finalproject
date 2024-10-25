@@ -101,12 +101,12 @@
                               <Pane prefHeight="79.0" prefWidth="558.0" styleClass="MediaDP-pane" stylesheets="@stylesheet.css">
                                  <children>
                                     <Circle fx:id="selectedUserProfile" fill="#615ed1" layoutX="40.0" layoutY="40.0" radius="26.0" stroke="#dcc1c1" strokeType="INSIDE" strokeWidth="0.0" />
-                                    <Label fx:id="selectedUserLabel" layoutX="83.0" layoutY="14.0" text="Name Placeholder">
+                                    <Label fx:id="selectedUserLabel" layoutX="83.0" layoutY="14.0" >
                                        <font>
                                           <Font name="Arial Rounded MT Bold" size="24.0" />
                                        </font>
                                     </Label>
-                                    <Label layoutX="82.0" layoutY="40.0" text="Active now" textFill="#3f9e4a">
+                                    <Label fx:id="statusLabel" layoutX="82.0" layoutY="40.0" >
                                        <font>
                                           <Font name="Arial" size="17.0" />
                                        </font>
@@ -115,7 +115,7 @@
                               </Pane>
                               <Pane prefHeight="661.0" prefWidth="558.0" styleClass="MediaDP-pane" stylesheets="@stylesheet.css">
                                  <children>
-                                    <ScrollPane fx:id="messageContainer" prefHeight="661.0" prefWidth="558.0">
+                                    <ScrollPane  fx:id="messageContainer" prefHeight="661.0" prefWidth="558.0">
                                        <content>
                                           <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="200.0" />
                                        </content>
